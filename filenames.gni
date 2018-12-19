@@ -1,9 +1,4 @@
 filenames = {
-  js2c_sources = [
-    "lib/common/asar.js",
-    "lib/common/asar_init.js",
-  ]
-
   js_sources = [
     "lib/browser/api/app.js",
     "lib/browser/api/auto-updater.js",
@@ -616,6 +611,8 @@ filenames = {
     "atom/common/native_mate_converters/v8_value_converter.h",
     "atom/common/native_mate_converters/value_converter.cc",
     "atom/common/native_mate_converters/value_converter.h",
+    "atom/common/native_module_loader.cc",
+    "atom/common/native_module_loader.h",
     "atom/common/node_bindings.cc",
     "atom/common/node_bindings.h",
     "atom/common/node_bindings_linux.cc",

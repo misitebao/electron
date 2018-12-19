@@ -20,8 +20,8 @@
 #include "third_party/blink/public/web/web_document.h"
 #include "third_party/blink/public/web/web_local_frame.h"
 
+#include "atom/common/native_module_loader.h"
 #include "atom/common/node_includes.h"
-#include "atom_natives.h"  // NOLINT: This file is generated with js2c
 #include "tracing/trace_event.h"
 
 namespace atom {
@@ -37,7 +37,8 @@ bool IsDevToolsExtension(content::RenderFrame* render_frame) {
 
 AtomRendererClient::AtomRendererClient()
     : node_bindings_(NodeBindings::Create(NodeBindings::RENDERER)),
-      atom_bindings_(new AtomBindings(uv_default_loop())) {}
+      atom_bindings_(new AtomBindings(uv_default_loop())),
+      per_process_loader_(new NativeModuleLoader()) {}
 
 AtomRendererClient::~AtomRendererClient() {
   asar::ClearArchives();
@@ -189,28 +190,19 @@ void AtomRendererClient::SetupMainWorldOverrides(
     v8::Handle<v8::Context> context,
     content::RenderFrame* render_frame) {
   // Setup window overrides in the main world context
-  v8::Isolate* isolate = context->GetIsolate();
-  v8::HandleScope handle_scope(isolate);
-  v8::Context::Scope context_scope(context);
-
   // Wrap the bundle into a function that receives the isolatedWorld as
   // an argument.
-  std::string left = "(function (nodeProcess, isolatedWorld) {\n";
-  std::string right = "\n})";
-  auto source = v8::String::Concat(
-      isolate, mate::ConvertToV8(isolate, left)->ToString(isolate),
-      v8::String::Concat(isolate,
-                         node::isolated_bundle_value.ToStringChecked(isolate),
-                         mate::ConvertToV8(isolate, right)->ToString(isolate)));
-  auto result = RunScript(context, source);
-  DCHECK(result->IsFunction());
+  auto* isolate = context->GetIsolate();
+  std::vector<v8::Local<v8::String>> isolated_bundle_params = {
+      node::FIXED_ONE_BYTE_STRING(isolate, "nodeProcess"),
+      node::FIXED_ONE_BYTE_STRING(isolate, "isolatedWorld")};
 
-  v8::Local<v8::Value> args[] = {
-      GetEnvironment(render_frame)->process_object(),
-      GetContext(render_frame->GetWebFrame(), isolate)->Global(),
-  };
-  ignore_result(result.As<v8::Function>()->Call(context, v8::Null(isolate),
-                                                node::arraysize(args), args));
+  std::vector<v8::Local<v8::Value>> isolated_bundle_args = {
+      GetEnvironment(render_frame)->process_object(), context->Global()};
+
+  per_process_loader_->CompileAndCall(context, "electron/js2c/isolated_bundle",
+                                      &isolated_bundle_params,
+                                      &isolated_bundle_args, nullptr);
 }
 
 node::Environment* AtomRendererClient::GetEnvironment(

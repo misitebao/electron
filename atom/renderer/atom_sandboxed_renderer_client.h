@@ -13,6 +13,8 @@
 
 namespace atom {
 
+class NativeModuleLoader;
+
 class AtomSandboxedRendererClient : public RendererClientBase {
  public:
   AtomSandboxedRendererClient();
@@ -35,6 +37,7 @@ class AtomSandboxedRendererClient : public RendererClientBase {
   void RenderViewCreated(content::RenderView*) override;
 
  private:
+  std::unique_ptr<NativeModuleLoader> per_process_loader_;
   std::unique_ptr<base::ProcessMetrics> metrics_;
 
   DISALLOW_COPY_AND_ASSIGN(AtomSandboxedRendererClient);
